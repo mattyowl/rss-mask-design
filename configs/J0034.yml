@@ -1,0 +1,53 @@
+# Parameters file for use with makeSALTSlitMaskFiles.py
+
+# Cluster/field name/centre coords
+# Output from the script will be written to MaskFiles_<name>/
+name: 'J0034.4+0225'
+RADeg: 8.610
+decDeg: 2.408
+
+# The format of the galaxy catalog file - either "FetchDR8", "FelipeS82", "FelipeDR8", "MattFITS", or "zCluster"
+catalogFormat: "zCluster"
+
+# Path to the galaxy catalog file - OR the database, if catalogFormat is 'zCluster'
+galaxyCatalogFile: "DECaLSDR9"
+
+# Below specify arbitrary cuts on catalog for top priority targets to put slits on
+targetCuts:
+    - 'r > 17.5'
+    - 'r < 22'
+    - 'r-z < 0.78'
+
+# Cuts below are used to specify secondary targets, these are used when no more of
+# the galaxies that pass targetCuts can be placed in a mask
+fillerCuts:
+    - 'r > 17.5'
+    - 'r < 23'
+
+# Slit dimensions
+slitLengthArcsec: 9.0
+slitWidthArcsec: 1.5
+
+# Minimum gap to leave between slits 
+safetyArcsec: 1.0
+
+# List of object IDs in the galaxy catalog to include in every mask
+# In this case this is the BCG  
+alwaysIncludeIDs: []
+
+# Slit length for the above - if this was a BCG, might want a longer slit, for example
+alwaysSlitLengthArcsec: 10.0
+
+# Reference stars, for slit mask alignment - these should be selected from brightStars.reg
+# To make brightStars.reg without making slit mask files, run the script with refStarIDs=[]
+refStarIDs:
+    - 126
+    - 39
+    - 24
+    - 128
+
+# Fluffy stuff
+CMDCol: "r-z"
+
+# Number of masks to make - objects will not overlap between masks unless they are in alwaysIncludeIDs
+numMasks: 6
