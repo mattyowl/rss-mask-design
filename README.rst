@@ -77,5 +77,5 @@ SDSS photometry was used; here we use DECaLS which doesn't have an
 
    Use:
 
-       * PA = 180 deg for objects with declination > -35 degrees
-       * PA = 0 deg for objects with declination < -35 degrees
+   * PA = 180 deg for objects with declination > -35 degrees
+   * PA = 0 deg for objects with declination < -35 degrees
