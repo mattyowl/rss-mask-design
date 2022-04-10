@@ -63,13 +63,13 @@ SDSS photometry was used; here we use DECaLS which doesn't have an
 
    Useful files include:
 
-       * A colour--magnitude diagram that you may use to adjust your
-         target cuts (``CMD.png``).
+   * A colour--magnitude diagram that you may use to adjust your
+     target cuts (``CMD.png``).
 
-       * Colour images with target objects marked (``RGB_SlitsLoc_Mask?.png``).
+   * Colour images with target objects marked (``RGB_SlitsLoc_Mask?.png``).
 
-       * Finder-chart type images (DSS image in the background) with
-         both target objects and alignment stars marked (``*_slitData_Mask?.png``)
+   * Finder-chart type images (DSS image in the background) with
+     both target objects and alignment stars marked (``*_slitData_Mask?.png``)
 
 #. Once you are happy with the slit mask designs produced by the script,
    you must use the ``pySlitMask.py`` tool to convert these into the format
