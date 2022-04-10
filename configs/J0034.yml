@@ -14,14 +14,14 @@ galaxyCatalogFile: "DECaLSDR9"
 
 # Below specify arbitrary cuts on catalog for top priority targets to put slits on
 targetCuts:
-    - 'r > 17.5'
+    - 'r > 17'
     - 'r < 22'
-    - 'r-z < 0.78'
+    - 'r-z < 1'
 
 # Cuts below are used to specify secondary targets, these are used when no more of
 # the galaxies that pass targetCuts can be placed in a mask
 fillerCuts:
-    - 'r > 17.5'
+    - 'r > 17'
     - 'r < 23'
 
 # Slit dimensions
@@ -31,8 +31,7 @@ slitWidthArcsec: 1.5
 # Minimum gap to leave between slits 
 safetyArcsec: 1.0
 
-# List of object IDs in the galaxy catalog to include in every mask
-# In this case this is the BCG  
+# List of object IDs in the galaxy catalog to include in every mask (e.g., the BCG)
 alwaysIncludeIDs: []
 
 # Slit length for the above - if this was a BCG, might want a longer slit, for example
@@ -41,10 +40,10 @@ alwaysSlitLengthArcsec: 10.0
 # Reference stars, for slit mask alignment - these should be selected from brightStars.reg
 # To make brightStars.reg without making slit mask files, run the script with refStarIDs=[]
 refStarIDs:
-    - 126
-    - 39
-    - 24
-    - 128
+    - 5923
+    - 4972
+    - 5389
+    - 4225
 
 # Fluffy stuff
 CMDCol: "r-z"

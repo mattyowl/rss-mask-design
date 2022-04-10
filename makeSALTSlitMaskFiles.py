@@ -20,6 +20,7 @@ from zCluster import *
 import astropy.table as atpy
 import urllib.request, urllib.parse, urllib.error
 import urllib.request, urllib.error, urllib.parse
+import urllib3
 import math
 import matplotlib.patches as patches
 import string
@@ -59,9 +60,34 @@ def fetchSDSSDR8Image(name, RADeg, decDeg, sizeArcmin = 12.0, JPEGFolder = "SDSS
             sys.exit()
             print("... WARNING: couldn't get SDSS DR8 image ...")
             outFileName=None
-           
+
 #-------------------------------------------------------------------------------------------------------------
-def makeSlitsSDSSPlot(name, RADeg, decDeg, slitMask, outFileName, JPEGFolder = "SDSSDR8Images", sizeArcmin = 12.0, remakePlots = True, 
+def fetchLegacySurveyImage(name, RADeg, decDeg, sizeArcmin = 12, sizePix = 1200, JPEGFolder = "RGBImages",
+                           refetch = False, layer = 'ls-dr9', bands = 'grz'):
+    """Fetches .jpg cut-out from legacysurvey.org sky viewer. Based on the code in sourcery.
+
+    Valid layers include e.g. decals-dr7, des-dr1 etc..
+
+    """
+
+    outFileName=JPEGFolder+os.path.sep+name.replace(" ", "_")+".jpg"
+    os.makedirs(JPEGFolder, exist_ok = True)
+
+    http=urllib3.PoolManager()
+
+    decalsWidth=sizePix
+    decalsPixScale=(sizeArcmin*60.0)/float(decalsWidth)
+    if os.path.exists(outFileName) == False or refetch == True:
+        #http://legacysurvey.org/viewer/jpeg-cutout?ra=52.102810&dec=-21.670020&size=2048&layer=des-dr1&pixscale=0.3809&bands=grz
+        urlString="http://legacysurvey.org/viewer/jpeg-cutout?ra=%.6f&dec=%.6f&size=%d&layer=%s&pixscale=%.4f&bands=%s" % (RADeg, decDeg, decalsWidth, layer, decalsPixScale, bands)
+        print("... getting RGB image: %s" % (urlString))
+        resp=http.request('GET', urlString)
+        with open(outFileName, 'wb') as f:
+            f.write(resp.data)
+            f.close()
+
+#-------------------------------------------------------------------------------------------------------------
+def makeSlitsRGBPlot(name, RADeg, decDeg, slitMask, outFileName, JPEGFolder = "RGBImages", sizeArcmin = 12.0, remakePlots = True,
                       noAxes = False, plotClusterPos = True, 
                       figSize = (10, 7)):
     """Makes astPlot plots out of SDSS JPEG image, overplotting slitMask.
@@ -152,7 +178,8 @@ def makeSlitsSDSSPlot(name, RADeg, decDeg, slitMask, outFileName, JPEGFolder = "
     
 #-------------------------------------------------------------------------------------------------------------
 def catalog2DS9(catalog, outFileName, constraintsList = [], addInfo = [], idKeyToUse = 'name', 
-                RAKeyToUse = 'RADeg', decKeyToUse = 'decDeg', color = "cyan"):
+                RAKeyToUse = 'RADeg', decKeyToUse = 'decDeg', color = "cyan", includeRSSFoV = False,
+                centreRADeg = None, centreDecDeg = None):
     """Converts a catalog containing object dictionaries into a ds9 region file. Objects will be labelled
     in the .reg file according to the idKeyToUse.
     
@@ -189,6 +216,8 @@ def catalog2DS9(catalog, outFileName, constraintsList = [], addInfo = [], idKeyT
             colorString=color
         outFile.write("fk5;point(%.6f,%.6f) # point=boxcircle color={%s} text={%s%s}\n" \
                     % (obj[RAKeyToUse], obj[decKeyToUse], colorString, obj[idKeyToUse], infoString))
+    if includeRSSFoV == True and centreRADeg is not None and centreDecDeg is not None:
+        outFile.write('circle(%.6f,%.6f,%.6f") # color=%s\n' % (centreRADeg, centreDecDeg, 4.0*60.0, "green"))
     outFile.close()
         
 #-------------------------------------------------------------------------------------------------------------
@@ -670,7 +699,7 @@ def fetchDSSImage(RADeg, decDeg, outFileName, sizeArcmin = 10.0, refetch = False
     sleepiness=10
     retries=1   # don't flog a dead horse
     survey="DSS"
-    if refetch == True:# or checkImageDownloadSuccess(outFileName) == False:
+    if os.path.exists(outFileName) == False:# or checkImageDownloadSuccess(outFileName) == False:
         if verbose == True: print(">>> Fetching Skyview image ...")
         success=False
         attempts=0
@@ -832,7 +861,7 @@ else:
             retrieverOptions={}
         retrieverOptions['altCacheDir']="retrieverCache"
         os.makedirs("retrieverCache", exist_ok = True)
-        myCatalog=retriever(cRADeg, cDecDeg, halfBoxSizeDeg = 5.0/60.0, optionsDict = retrieverOptions)
+        myCatalog=retriever(cRADeg, cDecDeg, halfBoxSizeDeg = 10.0/60.0, optionsDict = retrieverOptions)
         keys=myCatalog[0].keys()
         tab=atpy.Table()
         for k in keys:
@@ -867,7 +896,7 @@ else:
     if catalogFormat == 'zCluster':# and database == 'CFHTLenS':
         # Assume we already have the retriever set-up above
         retrieverOptions['getStars']=True
-        starCatalog=retriever(cRADeg, cDecDeg, halfBoxSizeDeg = 5.0/60.0, optionsDict = retrieverOptions)
+        starCatalog=retriever(cRADeg, cDecDeg, halfBoxSizeDeg = 10.0/60.0, optionsDict = retrieverOptions)
         keys=starCatalog[0].keys()
         starTab=atpy.Table()
         for k in keys:
@@ -885,7 +914,8 @@ else:
             starCatalog.append(objDict)
             refStarIDs.append(objDict['id'])
         brightStars=selectFromCatalog(starCatalog, ["r < 19"])
-        catalog2DS9(brightStars, outDir+os.path.sep+"brightStars.reg", addInfo=[{'key': 'r', 'fmt': '%.3f'}], idKeyToUse = 'id')
+        catalog2DS9(brightStars, outDir+os.path.sep+"brightStars.reg", addInfo=[{'key': 'r', 'fmt': '%.3f'}], idKeyToUse = 'id',
+                    includeRSSFoV = True, centreRADeg = cRADeg, centreDecDeg = cDecDeg)
     elif catalogFormat == 'Mathilde':
         starCatalog=[]
         refStarIDs=[]
@@ -899,10 +929,11 @@ else:
         starCatalog=SDSSRetriever(cRADeg, cDecDeg, halfBoxSizeDeg = 5.0/60.0, DR = 8, objType = 'star')
         # These are just for eyeballing which stars to include, since we'll need ids of these in my star catalogs
         brightStars=selectFromCatalog(starCatalog, ["r < 19"])
-        catalog2DS9(brightStars, outDir+os.path.sep+"brightStars.reg", addInfo=[{'key': 'r', 'fmt': '%.3f'}], idKeyToUse = 'id')
+        catalog2DS9(brightStars, outDir+os.path.sep+"brightStars.reg", addInfo=[{'key': 'r', 'fmt': '%.3f'}], idKeyToUse = 'id',
+                    includeRSSFoV = True, centreRADeg = cRADeg, centreDecDeg = cDecDeg)
         
     # This is just nice
-    fetchSDSSDR8Image(clusterDict['name'], clusterDict['RADeg'], clusterDict['decDeg'])
+    fetchLegacySurveyImage(clusterDict['name'], clusterDict['RADeg'], clusterDict['decDeg'])
 
     # Apply cuts on galaxies
     targetCatalog=selectFromCatalog(myCatalog, clusterDict['targetCuts'])
@@ -989,8 +1020,8 @@ else:
     maskCount=0
     for slitMask in previousMasksList:
         maskCount=maskCount+1
-        makeSlitsSDSSPlot(clusterDict['name'], clusterDict['RADeg'], clusterDict['decDeg'], slitMask, 
-                          outDir+os.path.sep+"SDSS_SlitsLoc_Mask%d.png" % (maskCount))
+        makeSlitsRGBPlot(clusterDict['name'], clusterDict['RADeg'], clusterDict['decDeg'], slitMask,
+                          outDir+os.path.sep+"RGB_SlitsLoc_Mask%d.png" % (maskCount))
         
     # Plot where targeted slits are on the CMD
     parDict=clusterDict
@@ -1012,9 +1043,10 @@ else:
     pylab.plot(r, col, 'b.')
     pylab.plot(rSlits, colSlits, 'ro')
     pylab.xlim(15, 25)
-    #pylab.ylim(-0.5, 1.5)
+    pylab.ylim(0, 2)
     pylab.xlabel("r (AB)")
     pylab.ylabel(parDict['CMDCol'])
     pylab.savefig(outDir+os.path.sep+"CMD.png")
     pylab.close()
+
 
