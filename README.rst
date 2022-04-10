@@ -21,6 +21,10 @@ Please use the `GitHub issues page <https://github.com/mattowl/rss-mask-design/i
 and/or contact `Matt Hilton <mailto:matt.hilton@mykolab.com>`_ with
 any comments, questions, or bug reports.
 
+If by some miracle this code is useful for your work, please cite
+the paper which describes the first use of the algorithm used here,
+which is `Kirk et al. (2015) <https://ui.adsabs.harvard.edu/abs/2015MNRAS.449.4010K/abstract>`_.
+
 
 Workflow
 --------
