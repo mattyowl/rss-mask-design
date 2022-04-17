@@ -15,6 +15,10 @@ name: $NAME
 RADeg: $RADEG
 decDeg: $DECDEG
 
+# Mask meta data, needed for final output
+proposer: 'Matt Hilton'
+proposalCode: '2022-1-MLT-005'
+
 # The format of the galaxy catalog file - either "FetchDR8", "FelipeS82", "FelipeDR8", "MattFITS", or "zCluster"
 catalogFormat: "zCluster"
 

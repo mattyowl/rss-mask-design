@@ -6,6 +6,10 @@ name: 'J0034.4+0225'
 RADeg: 8.610
 decDeg: 2.408
 
+# Mask meta data, needed for final output
+proposer: 'Matt Hilton'
+proposalCode: '2022-1-MLT-005'
+
 # The format of the galaxy catalog file - either "FetchDR8", "FelipeS82", "FelipeDR8", "MattFITS", or "zCluster"
 catalogFormat: "zCluster"
 
@@ -49,4 +53,4 @@ refStarIDs:
 CMDCol: "r-z"
 
 # Number of masks to make - objects will not overlap between masks unless they are in alwaysIncludeIDs
-numMasks: 6
+numMasks: 1

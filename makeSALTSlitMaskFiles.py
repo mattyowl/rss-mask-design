@@ -27,6 +27,10 @@ import string
 from PIL import Image
 import mechanize
 from zCluster import retrievers
+sys.path.append("rss-proptools")
+from finder_chart import finderchart
+import slitmask
+import zipfile
 import IPython
 import yaml
 
@@ -381,20 +385,35 @@ def makeTargetSlitDataFile(fileName, targetCatalog, fillerCatalog, slitWidth, sl
         #0 goes along for the ride (do not use for program targets!); others ignored.
         #-1 indicates a reference star
     # New:
-    header="#Object_Name    RA  Dec Equinox Magnitude   PassBand    Priority_Code\n"           
-    outFile=open(fileName, "w")
-    outFile.write(header)
-    for key in slitsDict:
-        slit=slitsDict[key]
-        line="%.6f %.6f 2000 %.3f r" % (slit['RADeg'], slit['decDeg'], slit['mag_r'])
-        if slit['type'] == 'object':
-            line="tID"+str(slit['catalogID'])+" "+line+" 1\n"
-        elif slit['type'] == 'refStar':
-            line="sID"+str(slit['refStarID'])+" "+line+" -1\n"
-        else:
-            raise Exception("didn't understand slit['type'] %s" % (slit['type']))
-        outFile.write(line)
-    outFile.close()  
+    #header="#Object_Name    RA  Dec Equinox Magnitude   PassBand    Priority_Code\n"
+    #outFile=open(fileName, "w")
+    #outFile.write(header)
+    #for key in slitsDict:
+        #slit=slitsDict[key]
+        #line="%.6f %.6f 2000 %.3f r" % (slit['RADeg'], slit['decDeg'], slit['mag_r'])
+        #if slit['type'] == 'object':
+            #line="tID"+str(slit['catalogID'])+" "+line+" 1\n"
+        #elif slit['type'] == 'refStar':
+            #line="sID"+str(slit['refStarID'])+" "+line+" -1\n"
+        #else:
+            #raise Exception("didn't understand slit['type'] %s" % (slit['type']))
+        #outFile.write(line)
+    #outFile.close()
+    # Long format
+    header="#name targ_ra targ_dec equinox mag band priority width length tilt\n"
+    with open(fileName, "w") as outFile:
+        outFile.write(header)
+        for key in slitsDict:
+            slit=slitsDict[key]
+            line="%.6f %.6f 2000 %.3f r" % (slit['RADeg'], slit['decDeg'], slit['mag_r'])
+            if slit['type'] == 'object':
+                line="tID"+str(slit['catalogID'])+" "+line+" 1"
+            elif slit['type'] == 'refStar':
+                line="sID"+str(slit['refStarID'])+" "+line+" -1"
+            else:
+                raise Exception("didn't understand slit['type'] %s" % (slit['type']))
+            line=line+" %.3f %.3f 0\n" % (slit['slitWidth'], slit['slitLength'])
+            outFile.write(line)
     #---
 
     # Write as DS9 .reg file here, complete with circle for RSS fov etc..
@@ -758,7 +777,48 @@ def checkImageDownloadSuccess(fileName):
         success=False
     
     return success  
-    
+
+#------------------------------------------------------------------------------------------------------------
+def makeRSMTFile(targetDataFileName, imageFileName, targetName, RADeg, decDeg, proposer, proposalCode, maskName, outDir):
+    """Write slit mask files in the format SALT uses (XML file and finder chart in ZIP archive).
+
+    The output file name is outDir/maskName.rsmt
+
+    """
+    sm=slitmask.SlitMask()
+
+    sm.creator='rss-mask-design'
+    sm.proposer=proposer
+    sm.proposal_code=proposalCode
+    sm.target_name=targetName
+    sm.mask_name=maskName
+
+    sm.add_center_ra(RADeg)
+    sm.add_center_dec(decDeg)
+
+    if sm.center_dec > -35:
+        sm.add_position_angle(180)
+    else:
+        sm.add_position_angle(0)
+
+    sm.slitlets.readascii(targetDataFileName, form = "long")
+    sm.set_MaskPosition()
+    sm.outFoV()
+    sm.validate()
+
+    with open("Slitmask.xml", "w") as outFile:
+        outFile.write(sm.writexml())
+
+    finderchart("Slitmask.xml", image = imageFileName, outfile = "Slitmask.png")
+
+    zf=zipfile.ZipFile(RSMTDir+os.path.sep+maskName+".rsmt", mode = "w")
+    zf.write("Slitmask.png")
+    zf.write("Slitmask.xml")
+    zf.close()
+
+    os.remove("Slitmask.xml")
+    os.remove("Slitmask.png")
+
 #-------------------------------------------------------------------------------------------------------------
 # Main
 if len(sys.argv) < 2:
@@ -772,8 +832,10 @@ else:
 
     # Put everthing under here
     outDir="MaskFiles_"+clusterDict['name'].replace(" ", "_")
-    if os.path.exists(outDir) == False:
-        os.makedirs(outDir)
+    os.makedirs(outDir, exist_ok = True)
+
+    RSMTDir="RSMTFiles"
+    os.makedirs(RSMTDir, exist_ok = True)
 
     # Cluster position
     cRADeg=clusterDict['RADeg']
@@ -913,7 +975,7 @@ else:
                 objDict[key]=row[key]
             starCatalog.append(objDict)
             refStarIDs.append(objDict['id'])
-        brightStars=selectFromCatalog(starCatalog, ["r < 19"])
+        brightStars=selectFromCatalog(starCatalog, ["r < 18.5"])
         catalog2DS9(brightStars, outDir+os.path.sep+"brightStars.reg", addInfo=[{'key': 'r', 'fmt': '%.3f'}], idKeyToUse = 'id',
                     includeRSSFoV = True, centreRADeg = cRADeg, centreDecDeg = cDecDeg)
     elif catalogFormat == 'Mathilde':
@@ -999,13 +1061,20 @@ else:
             sys.exit()
         refStars=makeRefStarsList(starCatalog, refStarIDs, "Mask%d" % (i), outDir)
         
-        maskSlits=makeTargetSlitDataFile(outDir+os.path.sep+"%s_slitData_Mask%d.txt" % (clusterDict['name'].replace(" ", "_"), i), 
+        targetDataFileName=outDir+os.path.sep+"%s_slitData_Mask%d.txt" % (clusterDict['name'].replace(" ", "_"), i)
+        maskSlits=makeTargetSlitDataFile(targetDataFileName,
                                         targetCatalog, fillerCatalog, clusterDict['slitWidthArcsec'], clusterDict['slitLengthArcsec'], 
                                         cRADeg, cDecDeg, clusterDict['safetyArcsec'],
                                         refStarSlitLength = 5.0, refStarSlitWidth = 5.0, refStarsList = refStars, previousMasksList = previousMasksList,
                                         alwaysIncludeList = alwaysIncludeList, alwaysSlitLength = alwaysSlitLength,
                                         DSSImageFileName = DSSImageFileName,
                                         imageCuts = [3600, 8800])
+
+        maskName="%sM%d" % (clusterDict['name'].replace(" ", "_"), i)
+
+        makeRSMTFile(targetDataFileName, DSSImageFileName, clusterDict['name'], clusterDict['RADeg'], clusterDict['decDeg'],
+                     clusterDict['proposer'], clusterDict['proposalCode'], maskName, RSMTDir)
+
         previousMasksList.append(maskSlits)
 
     # Count slits
