@@ -128,7 +128,8 @@ def makeSlitsRGBPlot(name, RADeg, decDeg, slitMask, outFileName, JPEGFolder = "R
     R=data[:, :, 0]
     G=data[:, :, 1]
     B=data[:, :, 2]
-    cutLevels=[[R.min(), R.max()], [G.min(), G.max()], [B.min(), B.max()]]
+    #cutLevels=[[R.min(), R.max()], [G.min(), G.max()], [B.min(), B.max()]]
+    cutLevels=[[0, 255], [0, 255], [0, 255]]
     
     # Make a WCS
     xSizeDeg, ySizeDeg=sizeArcmin/60.0, sizeArcmin/60.0
