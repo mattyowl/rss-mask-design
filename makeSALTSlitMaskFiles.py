@@ -13,7 +13,7 @@ import sys
 import numpy as np
 import datetime
 import time
-import pylab
+import pylab as plt
 import operator
 from astLib import *
 from zCluster import *
@@ -101,9 +101,9 @@ def makeSlitsRGBPlot(name, RADeg, decDeg, slitMask, outFileName, JPEGFolder = "R
     """
     
     #print ">>> Making SDSS DR7, DR8 or S82 plots ..."
-    plotInteractiveStatus=pylab.isinteractive()
+    plotInteractiveStatus=plt.isinteractive()
     if plotInteractiveStatus == True:
-        pylab.matplotlib.interactive(False)
+        plt.matplotlib.interactive(False)
     
     sizeDeg=sizeArcmin/60.0
             
@@ -156,7 +156,7 @@ def makeSlitsRGBPlot(name, RADeg, decDeg, slitMask, outFileName, JPEGFolder = "R
     astImages.saveFITS(outFileName.replace(".png", ".fits"), R, wcs)
     
     # Make plot
-    fig=pylab.figure(figsize = figSize)
+    fig=plt.figure(figsize = figSize)
     if noAxes == True:
         axes=[0, 0, 1, 1]
         axesLabels=None
@@ -175,10 +175,10 @@ def makeSlitsRGBPlot(name, RADeg, decDeg, slitMask, outFileName, JPEGFolder = "R
             decs.append(obj['decDeg'])
     p.addPlotObjects(RAs, decs, 'slitObjects', size = sizeDeg/40.0*3600.0, symbol = 'box', color = "red")
 
-    pylab.savefig(outFileName)
-    pylab.close()
+    plt.savefig(outFileName)
+    plt.close()
     
-    pylab.matplotlib.interactive(plotInteractiveStatus)
+    plt.matplotlib.interactive(plotInteractiveStatus)
     
 #-------------------------------------------------------------------------------------------------------------
 def catalog2DS9(catalog, outFileName, constraintsList = [], addInfo = [], idKeyToUse = 'name', 
@@ -438,7 +438,7 @@ def makeTargetSlitDataFile(fileName, targetCatalog, fillerCatalog, slitWidth, sl
         wcs=astWCS.WCS(DSSImageFileName)
         
         clip=astImages.clipImageSectionWCS(img[0].data, wcs, centreRADeg, centreDecDeg, 12/60.0)
-        fig=pylab.figure(figsize=(12,12))
+        fig=plt.figure(figsize=(12,12))
         p=astPlots.ImagePlot(clip['data'], clip['wcs'], cutLevels = imageCuts, 
                              title = os.path.split(fileName)[-1].replace(".txt", "")+" (PA=180)", colorMapName = "gray_r")
         
@@ -469,7 +469,7 @@ def makeTargetSlitDataFile(fileName, targetCatalog, fillerCatalog, slitWidth, sl
                       
         
         p.save(fileName.replace(".txt", ".png"))
-        pylab.close()
+        plt.close()
         
     # Return this so that we can exclude these slits from the masks we make next
     return slitsDict
@@ -804,12 +804,18 @@ def makeRSMTFile(targetDataFileName, imageFileName, targetName, RADeg, decDeg, p
     sm.slitlets.readascii(targetDataFileName, form = "long")
     sm.set_MaskPosition()
     sm.outFoV()
+
+    print("\nChecking mask validity in a moment... if your mask is invalid due to not choosing reference stars, use:\n")
+    print("    ds9 %s -regions %s\n" % (imageFileName, os.path.dirname(imageFileName)+os.path.sep+"brightStars.reg"))
+    print("to inspect the image and choose suitable reference stars (add these to the config file under refStarIDs)\n")
+
     sm.validate()
 
     with open("Slitmask.xml", "w") as outFile:
         outFile.write(sm.writexml())
 
     finderchart("Slitmask.xml", image = imageFileName, outfile = "Slitmask.png")
+    plt.close()
 
     zf=zipfile.ZipFile(RSMTDir+os.path.sep+maskName+".rsmt", mode = "w")
     zf.write("Slitmask.png")
@@ -1054,11 +1060,14 @@ else:
         #fetchDSSImageFromESO(cRADeg, cDecDeg, DSSImageFileName, sizeArcmin = 10.0)
 
         if catalogFormat != "Mathilde":
-            refStarIDs=clusterDict['refStarIDs']
+            try:
+                refStarIDs=clusterDict['refStarIDs']
+            except:
+                refStarIDs=[]
             
-        if refStarIDs == []:
-            print("Need to select refStarIDs from brightStars.reg")
-            sys.exit()
+        #if refStarIDs == []:
+            #print("Need to select refStarIDs from brightStars.reg")
+            #sys.exit()
         refStars=makeRefStarsList(starCatalog, refStarIDs, "Mask%d" % (i), outDir)
         
         targetDataFileName=outDir+os.path.sep+"%s_slitData_Mask%d.txt" % (clusterDict['name'].replace(" ", "_"), i)
@@ -1109,13 +1118,13 @@ else:
                 rSlits.append(myCatalogTable['r'][objMask][0])
                 slitsCount=slitsCount+1
                 
-    pylab.plot(r, col, 'b.')
-    pylab.plot(rSlits, colSlits, 'ro')
-    pylab.xlim(15, 25)
-    pylab.ylim(0, 2)
-    pylab.xlabel("r (AB)")
-    pylab.ylabel(parDict['CMDCol'])
-    pylab.savefig(outDir+os.path.sep+"CMD.png")
-    pylab.close()
+    plt.plot(r, col, 'b.')
+    plt.plot(rSlits, colSlits, 'ro')
+    plt.xlim(15, 25)
+    plt.ylim(0, 2)
+    plt.xlabel("r (AB)")
+    plt.ylabel(parDict['CMDCol'])
+    plt.savefig(outDir+os.path.sep+"CMD.png")
+    plt.close()
 
 
