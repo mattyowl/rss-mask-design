@@ -981,7 +981,7 @@ else:
                 objDict[key]=row[key]
             starCatalog.append(objDict)
             refStarIDs.append(objDict['id'])
-        brightStars=selectFromCatalog(starCatalog, ["r < 18.5"])
+        brightStars=selectFromCatalog(starCatalog, ["r < 19"])
         catalog2DS9(brightStars, outDir+os.path.sep+"brightStars.reg", addInfo=[{'key': 'r', 'fmt': '%.3f'}], idKeyToUse = 'id',
                     includeRSSFoV = True, centreRADeg = cRADeg, centreDecDeg = cDecDeg)
     elif catalogFormat == 'Mathilde':

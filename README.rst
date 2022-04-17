@@ -60,7 +60,9 @@ SDSS photometry was used; here we use DECaLS which doesn't have an
    You should pick stars that are as widely distributed across the RSS
    field of view (represented by the large green circle in the DS9
    regions) as possible. Your reference stars should have similar
-   magnitudes.
+   magnitudes, and be as bright as possible (e.g., *r* < 18.5).
+   Note that very bright stars may not be available in the input catalog
+   (e.g., if they are saturated).
 
    Add the ID numbers of your chosen stars to the configuration ``.yml``
    file in the ``refStarIDs`` list.
