@@ -803,7 +803,7 @@ def makeRSMTFile(targetDataFileName, imageFileName, targetName, RADeg, decDeg, p
         sm.add_position_angle(0)
 
     sm.slitlets.readascii(targetDataFileName, form = "long")
-    sm.set_MaskPosition()
+    #sm.set_MaskPosition()
     sm.outFoV()
 
     print("\nChecking mask validity in a moment... if your mask is invalid due to not choosing reference stars, use:\n")
