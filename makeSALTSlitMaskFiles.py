@@ -33,6 +33,10 @@ import slitmask
 import zipfile
 import IPython
 import yaml
+import astropy.units as u
+from astropy.coordinates import SkyCoord
+from astroquery.gaia import Gaia
+Gaia.ROW_LIMIT=50  # Ensure the default row limit.
 
 #-------------------------------------------------------------------------------------------------------------
 def fetchSDSSDR8Image(name, RADeg, decDeg, sizeArcmin = 12.0, JPEGFolder = "SDSSDR8Images", refetch = False):
@@ -960,47 +964,29 @@ else:
         for key in list(tab.keys()):
             objDict[key]=row[key]
         myCatalog.append(objDict)
-            
-    # Get (usually SDSS) star catalog - use this to pick out alignment stars
-    if catalogFormat == 'zCluster':# and database == 'CFHTLenS':
-        # Assume we already have the retriever set-up above
-        retrieverOptions['getStars']=True
-        starCatalog=retriever(cRADeg, cDecDeg, halfBoxSizeDeg = 10.0/60.0, optionsDict = retrieverOptions)
-        keys=starCatalog[0].keys()
-        starTab=atpy.Table()
-        for k in keys:
-            arr=[]
-            for objDict in starCatalog:
-                arr.append(objDict[k])
-            starTab[k]=arr
-        starTab=tab[np.where(tab['r'] < 19)]
-        starCatalog=[]
-        refStarIDs=[]
-        for row in starTab:
-            objDict={}
-            for key in list(tab.keys()):
-                objDict[key]=row[key]
-            starCatalog.append(objDict)
-            refStarIDs.append(objDict['id'])
-        brightStars=selectFromCatalog(starCatalog, ["r < 19"])
-        catalog2DS9(brightStars, outDir+os.path.sep+"brightStars.reg", addInfo=[{'key': 'r', 'fmt': '%.3f'}], idKeyToUse = 'id',
-                    includeRSSFoV = True, centreRADeg = cRADeg, centreDecDeg = cDecDeg)
-    elif catalogFormat == 'Mathilde':
-        starCatalog=[]
-        refStarIDs=[]
-        for row in starTab:
-            objDict={}
-            for key in list(tab.keys()):
-                objDict[key]=row[key]
-            starCatalog.append(objDict)
-            refStarIDs.append(objDict['id'])
-    else:
-        starCatalog=SDSSRetriever(cRADeg, cDecDeg, halfBoxSizeDeg = 5.0/60.0, DR = 8, objType = 'star')
-        # These are just for eyeballing which stars to include, since we'll need ids of these in my star catalogs
-        brightStars=selectFromCatalog(starCatalog, ["r < 19"])
-        catalog2DS9(brightStars, outDir+os.path.sep+"brightStars.reg", addInfo=[{'key': 'r', 'fmt': '%.3f'}], idKeyToUse = 'id',
-                    includeRSSFoV = True, centreRADeg = cRADeg, centreDecDeg = cDecDeg)
-        
+
+    # Get stars from GAIA (and pray the astrometry is consistent with whatever galaxies catalog we're using)
+    # NOTE: ID numbers here are now (obviously) different to those in the targets catalog
+    queryCoord=SkyCoord(ra = cRADeg, dec = cDecDeg, unit = (u.degree, u.degree), frame = 'icrs')
+    queryRadiusDeg=u.Quantity(8/60.0, u.deg)
+    job=Gaia.cone_search_async(queryCoord, queryRadiusDeg)
+    starTab=job.get_results()
+    starTab.rename_column('ra', 'RADeg')
+    starTab.rename_column('dec', 'decDeg')
+    starTab.rename_column('phot_rp_mean_mag', 'r')
+    starTab['id']=np.arange(len(starTab))+1
+    starCatalog=[]
+    refStarIDs=[]
+    for row in starTab:
+        objDict={}
+        for key in list(starTab.keys()):
+            objDict[key]=row[key]
+        starCatalog.append(objDict)
+        refStarIDs.append(objDict['id'])
+    brightStars=selectFromCatalog(starCatalog, ["r < 17"])
+    catalog2DS9(brightStars, outDir+os.path.sep+"brightStars.reg", addInfo=[{'key': 'r', 'fmt': '%.3f'}], idKeyToUse = 'id',
+                includeRSSFoV = True, centreRADeg = cRADeg, centreDecDeg = cDecDeg)
+
     # This is just nice
     fetchLegacySurveyImage(clusterDict['name'], clusterDict['RADeg'], clusterDict['decDeg'])
 
