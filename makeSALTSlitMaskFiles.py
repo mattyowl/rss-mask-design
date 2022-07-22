@@ -36,7 +36,7 @@ import yaml
 import astropy.units as u
 from astropy.coordinates import SkyCoord
 from astroquery.gaia import Gaia
-Gaia.ROW_LIMIT=50  # Ensure the default row limit.
+Gaia.ROW_LIMIT=200
 
 #-------------------------------------------------------------------------------------------------------------
 def fetchSDSSDR8Image(name, RADeg, decDeg, sizeArcmin = 12.0, JPEGFolder = "SDSSDR8Images", refetch = False):
