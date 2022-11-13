@@ -3,8 +3,12 @@ make `SALT <https://www.salt.ac.za/>`_ RSS slit masks using data from
 large photometric surveys.
 
 The code makes use of the `zCluster <https://github.com/ACTCollaboration/zCluster>`_ package.
-For the moment, you will need to have installed the latest version
-of ``zCluster`` from the ``master`` branch.
+You should be able to install this with::
+
+    pip install zCluster --user
+
+In addition, you will also need to install the ``ephem``, ``aplpy``,
+and ``astroquery`` modules (and perhaps some others).
 
 Some code from the ``pySlitMask.py`` script (in the ``proptools``
 package) by Steve Crawford/SAAO (slightly modified here) is used to
