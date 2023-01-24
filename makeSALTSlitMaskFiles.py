@@ -950,9 +950,23 @@ else:
         # Could add photo-z run here if we wanted
     elif catalogFormat == "zClusterOutput":
         tab=atpy.Table().read(clusterDict['galaxyCatalogFile'])
+    elif catalogFormat == 'GCLS':
+        tab=atpy.Table().read(clusterDict['galaxyCatalogFile'])
+        keyMap={'id': 'col1', 'RADeg': 'ALPHAWIN_J2000', 'decDeg': 'DELTAWIN_J2000', 'g': 'MAG_AUTO_G', 'r': 'MAG_AUTO_R'}
+        for k in keyMap.keys():
+            tab.rename_column(keyMap[k], k)
+        tab['g-r']=tab['g']-tab['r']
+        # GCLS catalogs contain a mix of different catalogs, e.g., stars? Strip for now
+        tab=tab[tab['r'] > 0]
     else:
         raise Exception("didn't understand catalogFormat (%s)" % (catalogFormat))
     # Clunkyness below isn't really needed if we're going zCluster only?
+    if cRADeg is None or cDecDeg is None:
+        print("WARNING: No centre coords given - using median RA, dec of object catalog")
+        cRADeg=np.median(tab['RADeg'])
+        cDecDeg=np.median(tab['decDeg'])
+        clusterDict['RADeg']=cRADeg
+        clusterDict['decDeg']=cDecDeg
     RAMin, RAMax, decMin, decMax=astCoords.calcRADecSearchBox(cRADeg, cDecDeg, RArcmin/60.0)
     RAMask=np.logical_and(np.greater(tab['RADeg'], RAMin), np.less(tab['RADeg'], RAMax))
     decMask=np.logical_and(np.greater(tab['decDeg'], decMin), np.less(tab['decDeg'], decMax))
@@ -1051,10 +1065,10 @@ else:
                 refStarIDs=clusterDict['refStarIDs']
             except:
                 refStarIDs=[]
-            
-        #if refStarIDs == []:
-            #print("Need to select refStarIDs from brightStars.reg")
-            #sys.exit()
+
+        if refStarIDs is None:
+            refStarIDs=[]
+
         refStars=makeRefStarsList(starCatalog, refStarIDs, "Mask%d" % (i), outDir)
         
         targetDataFileName=outDir+os.path.sep+"%s_slitData_Mask%d.txt" % (clusterDict['name'].replace(" ", "_"), i)
